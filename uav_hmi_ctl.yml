@@ -38,11 +38,41 @@ windows:
           - sleep 2
           - docker exec -it openpose_cont bash
           - waitFor /frame; roslaunch hpe_ros_package hpe_3d.launch
-  - uav_ros_ctl: 
-      layout: tiled 
-      panes: 
-        - full_run: 
+  - uav_ros_ctl:
+      layout: tiled
+      panes:
+        - uav_ros_ctl:
+          - docker exec -it uav_ros_cont bash
+          - waitForDockerContainer uav_ros_cont
+          - export SITL_RITW_TERMINAL="tmux new-window -d -n:ardupilot1"; waitForRos;
+            roslaunch ardupilot_gazebo sim_vehicle.launch
+            enable_console:=false
+            additional_arguments:="--no-rebuild"
+          - waitForRos; rosparam set use_sim_time true; roslaunch ardupilot_gazebo mavros.launch
+  - gazebo:
+      layout: tiled
+      panes:
+        - simulation:
+          - docker exec -it uav_ros_cont bash
           - waitForDockerContainer uav_ros_cont
           - sleep 2
+          - waitForRos; roslaunch ardupilot_gazebo kopterworx.launch use_sim_time:=true
+  - arm&takeoff:
+      layout: tiled
+      panes:
+        - ctl:
           - docker exec -it uav_ros_cont bash
-          - echo "test"
+          - sleep 3
+          - waitForRos; roslaunch uav_ros_control pid_carrot.launch
+        - takeoff:
+          - docker exec -it uav_ros_cont bash
+          - sleep 5
+          - rosrun ardupilot_gazebo automatic_takeoff.sh
+  - trajectory:
+      layout: tiled
+      panes:
+        - traj_ctl:
+          - docker exec -it uav_ros_cont bash
+          - sleep 4
+          - waitForRos; roslaunch uav_ros_tracker topp_tracker.launch
+
