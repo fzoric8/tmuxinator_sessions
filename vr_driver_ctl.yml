@@ -1,0 +1,37 @@
+# /home/zozan/.config/tmuxinator/vr_driver_ctl.yml
+
+name: vr_driver_ctl
+root: ~/
+
+root: ~/
+# Start local network between two PCs and enable multimaster for exchange of the body pose information 
+# as fast as possible 
+on_project_start:
+  - docker start openpose_cont
+on_project_exit:
+  - docker stop openpose_cont
+windows:
+  - openpose:
+      layout: tiled
+      # Synchronize all panes of this window, can be enabled before or after the pane commands run.
+      # 'before' represents legacy functionality and will be deprecated in a future release, in favour of 'after'
+      # synchronize: after
+      panes:
+        - rosbridge_server:
+          - waitForDockerContainer openpose_cont
+          - docker exec -it openpose_cont bash
+          - roslaunch rosbridge_server rosbridge_websocket.launch port:=4444
+        - vr_driver:
+          - waitForDockerContainer openpose_cont
+          - docker exec -it openpose_cont bash
+          - bash -c "python3 /root/catkin_ws/src/quest-ros-driver/scripts/driver.py"
+        - pcl_filter:
+          - waitForDockerContainer openpose_cont
+          - docker exec -it openpose_cont bash
+          - waitFor /camera/color/depth/points; rosrun pcl_ros_wrapper pcl_ros_filter
+  #- hpe2cmd: 
+  #    layout: tiled 
+  #    panes: 
+  #      - hpe2uav: 
+  #        - waitForDockerContainer uav_ros_cont
+  #        - waitForDockerContainer openpose_cont

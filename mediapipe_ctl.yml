@@ -1,0 +1,30 @@
+name: mediapipe_ctl
+root: ~/
+# Start local network between two PCs and enable multimaster for exchange of the body pose information 
+# as fast as possible 
+on_project_start:
+  - docker start depthai_noetic_cont
+  - docker start openpose_cont
+on_project_exit:
+  - docker stop openpose_cont
+  - docker stop depthai_noetic_cont
+windows:
+  - openpose:
+      layout: tiled
+      # Synchronize all panes of this window, can be enabled before or after the pane commands run.
+      # 'before' represents legacy functionality and will be deprecated in a future release, in favour of 'after'
+      # synchronize: after
+      panes:
+        - ros_core:
+          - waitForDockerContainer depthai_noetic_cont
+          - docker exec -it depthai_noetic_cont bash
+          - roscore
+        - luxonis_ros:
+          - waitForDockerContainer depthai_noetic_cont
+          - docker exec -it depthai_noetic_cont bash
+          - roslaunch depthai_ros_driver camera.launch rs_compat:=true --wait
+        - mpipe_ros:
+          - waitForDockerContainer openpose_cont
+          - docker exec -it openpose_cont bash
+          - waitFor /camera/color/camera_info
+          - roslaunch mp_wrapper_ros mp_wrapper_ros.launch
