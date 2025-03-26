@@ -1,15 +1,15 @@
-# /home/zozan/.config/tmuxinator/vr_driver_ctl.yml
+# /home/zozan/.config/tmuxinator/openpose_ctl.yml
 
-name: vr_driver_ctl
-root: ~/
-
+name: lux_openpose_ctl
 root: ~/
 # Start local network between two PCs and enable multimaster for exchange of the body pose information 
 # as fast as possible 
 on_project_start:
+  - docker start depthai_noetic_cont
   - docker start openpose_cont
 on_project_exit:
   - docker stop openpose_cont
+  - docker stop depthai_noetic_cont
 windows:
   - openpose:
       layout: tiled
@@ -17,27 +17,27 @@ windows:
       # 'before' represents legacy functionality and will be deprecated in a future release, in favour of 'after'
       # synchronize: after
       panes:
-        - rosbridge_server:
+        - ros_core:
+          - waitForDockerContainer depthai_noetic_cont
+          - docker exec -it depthai_noetic_cont bash
+          - roscore
+        - luxonis_ros:
+          - waitForDockerContainer depthai_noetic_cont
+          - docker exec -it depthai_noetic_cont bash
+          - roslaunch depthai_ros_driver camera.launch rs_compat:=true --wait
+        - openpose_ros:
           - waitForDockerContainer openpose_cont
           - docker exec -it openpose_cont bash
-          - roslaunch rosbridge_server rosbridge_websocket.launch port:=4444
-        - vr_driver:
+          - waitFor /camera/color/camera_info
+          - roslaunch ros_openpose run.launch
+        - h3d_cmd:
           - waitForDockerContainer openpose_cont
           - docker exec -it openpose_cont bash
-          - sleep 3
-          - bash -c "python3 /root/catkin_ws/src/quest-ros-driver/scripts/driver.py"
-        - pcl_filter:
-          - waitForDockerContainer openpose_cont
-          - docker exec -it openpose_cont bash
-          - sleep 5
-          - rosrun pcl_ros_wrapper pcl_ros_filter
-        - record_bag: 
-          - waitForDockerContainer openpose_cont
-          - docker exec -it openpose_cont bash
-          - echo "RECORD BAG HERE!" 
+          - waitFor /frame; roslaunch hpe_ros_package hpe_3d.launch
   #- hpe2cmd: 
   #    layout: tiled 
   #    panes: 
   #      - hpe2uav: 
   #        - waitForDockerContainer uav_ros_cont
   #        - waitForDockerContainer openpose_cont
+  #        - 

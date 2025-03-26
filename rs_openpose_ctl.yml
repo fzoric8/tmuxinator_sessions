@@ -1,15 +1,15 @@
-# /home/zozan/.config/tmuxinator/openpose_ctl.yml
+# /home/zozan/.config/tmuxinator/rs_openpose_ctl.yml
 
-name: openpose_ctl
+name: rs_openpose_ctl
 root: ~/
 # Start local network between two PCs and enable multimaster for exchange of the body pose information 
 # as fast as possible 
 on_project_start:
-  - docker start depthai_noetic_cont
+  - docker start realsense_ros_cont
   - docker start openpose_cont
 on_project_exit:
   - docker stop openpose_cont
-  - docker stop depthai_noetic_cont
+  - docker stop realsense_ros_cont
 windows:
   - openpose:
       layout: tiled
@@ -18,21 +18,19 @@ windows:
       # synchronize: after
       panes:
         - ros_core:
-          - waitForDockerContainer depthai_noetic_cont
+          - waitForDockerContainer realsense_ros_cont
           - docker exec -it depthai_noetic_cont bash
           - roscore
         - luxonis_ros:
-          - waitForDockerContainer depthai_noetic_cont
-          - docker exec -it depthai_noetic_cont bash
-          - sleep 3
-          - roslaunch depthai_ros_driver camera.launch rs_compat:=true
+          - waitForDockerContainer realsense_ros_cont
+          - docker exec -it realsense_ros_cont bash
+          - roslaunch realsense2_camera rs_rgbd.launch
         - openpose_ros:
           - waitForDockerContainer openpose_cont
           - docker exec -it openpose_cont bash
-          - sleep 8
-          - roslaunch ros_openpose run.launch
+          - waitFor /camera/color/camera_info
+          - roslaunch ros_openpose run.launch camera:=realsense
         - h3d_cmd:
           - waitForDockerContainer openpose_cont
-          - sleep 2
           - docker exec -it openpose_cont bash
           - waitFor /frame; roslaunch hpe_ros_package hpe_3d.launch
